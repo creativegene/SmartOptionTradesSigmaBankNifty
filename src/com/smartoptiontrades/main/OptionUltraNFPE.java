@@ -110,7 +110,7 @@ public class OptionUltraNFPE implements Runnable{
 		
 		try {
 		
-			rs=stmt.executeQuery("Select name,instrumentId,exchangeToken from option_trade_instrument where ltp>="+Integer.parseInt(prop.getProperty("ULTRA_NF_OPTION_PRICE"))+" and name like 'NIFTY%PE' order by ltp asc limit 1;");
+			rs=stmt.executeQuery("Select name,instrumentId,exchangeToken from option_trade_instrument where ltp>="+Integer.parseInt(prop.getProperty("ULTRA_NF_OPTION_PRICE"))+" and name like 'NIFTY%00PE' order by ltp asc limit 1;");
 			
 			while(rs.next()) {
 				
@@ -211,7 +211,18 @@ public class OptionUltraNFPE implements Runnable{
 					PE_Init_Price=getLTP(kiteConnect, instrumentID);
 				} catch (IOException | KiteException e) {
 					// TODO Auto-generated catch block
-					e.printStackTrace();
+					// TODO Auto-generated catch block
+					StringWriter sw = new StringWriter();
+		            e.printStackTrace(new PrintWriter(sw));
+		            String exceptionAsString = sw.toString();
+		            System.out.println(exceptionAsString);
+		            
+		            try {
+		    			kiteConnect = new GetKiteConnect().retrieve();
+		    		} catch (ClassNotFoundException | SQLException e1) {
+		    			// TODO Auto-generated catch block
+		    			System.out.println(LocalDateTime.now()+" : PE Error in re-initalizing Kite connect");
+		    		}
 				}
 				
 				try {
@@ -231,7 +242,18 @@ public class OptionUltraNFPE implements Runnable{
 						PE_Price=getLTP(kiteConnect, instrumentID);
 					} catch (IOException | KiteException e) {
 						// TODO Auto-generated catch block
-						e.printStackTrace();
+						// TODO Auto-generated catch block
+						StringWriter sw = new StringWriter();
+			            e.printStackTrace(new PrintWriter(sw));
+			            String exceptionAsString = sw.toString();
+			            System.out.println(exceptionAsString);
+			            
+			            try {
+			    			kiteConnect = new GetKiteConnect().retrieve();
+			    		} catch (ClassNotFoundException | SQLException e1) {
+			    			// TODO Auto-generated catch block
+			    			System.out.println(LocalDateTime.now()+" : PE Error in re-initalizing Kite connect");
+			    		}
 					}
 					
 					if(PE_Price<entryPrice && !orderFilled) {

@@ -119,7 +119,7 @@ public class OptionUltraNFCE implements Runnable{
 		
 		try {
 		
-			rs=stmt.executeQuery("Select name,instrumentId,exchangeToken from option_trade_instrument where ltp>="+Integer.parseInt(prop.getProperty("ULTRA_NF_OPTION_PRICE"))+" and name like 'NIFTY%CE' order by ltp asc limit 1;");
+			rs=stmt.executeQuery("Select name,instrumentId,exchangeToken from option_trade_instrument where ltp>="+Integer.parseInt(prop.getProperty("ULTRA_NF_OPTION_PRICE"))+" and name like 'NIFTY%00CE' order by ltp asc limit 1;");
 			
 			while(rs.next()) {
 				
@@ -220,7 +220,18 @@ public class OptionUltraNFCE implements Runnable{
 					CE_Init_Price=getLTP(kiteConnect, instrumentID);
 				} catch (IOException | KiteException e) {
 					// TODO Auto-generated catch block
-					e.printStackTrace();
+					// TODO Auto-generated catch block
+					StringWriter sw = new StringWriter();
+		            e.printStackTrace(new PrintWriter(sw));
+		            String exceptionAsString = sw.toString();
+		            System.out.println(exceptionAsString);
+		            
+		            try {
+		    			kiteConnect = new GetKiteConnect().retrieve();
+		    		} catch (ClassNotFoundException | SQLException e1) {
+		    			// TODO Auto-generated catch block
+		    			System.out.println(LocalDateTime.now()+" : CE Error in re-initalizing Kite connect");
+		    		}
 				}
 				
 				try {
@@ -240,7 +251,17 @@ public class OptionUltraNFCE implements Runnable{
 						CE_Price=getLTP(kiteConnect, instrumentID);
 					} catch (IOException | KiteException e) {
 						// TODO Auto-generated catch block
-						e.printStackTrace();
+						StringWriter sw = new StringWriter();
+			            e.printStackTrace(new PrintWriter(sw));
+			            String exceptionAsString = sw.toString();
+			            System.out.println(exceptionAsString);
+			            
+			            try {
+			    			kiteConnect = new GetKiteConnect().retrieve();
+			    		} catch (ClassNotFoundException | SQLException e1) {
+			    			// TODO Auto-generated catch block
+			    			System.out.println(LocalDateTime.now()+" : CE Error in re-initalizing Kite connect");
+			    		}
 					}
 					
 					if(CE_Price<entryPrice && !orderFilled) {

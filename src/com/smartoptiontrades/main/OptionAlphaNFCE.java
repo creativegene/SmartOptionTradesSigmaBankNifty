@@ -39,11 +39,11 @@ public class OptionAlphaNFCE implements Runnable{
 		boolean startCEModule = true;
 		Properties prop = new GetPropertiesObject().retrieve();
 		
-		int quantity=Integer.parseInt(prop.getProperty("ULTRA_NF_QTY"));
+		int quantity=Integer.parseInt(prop.getProperty("ALPHA_NF_QTY"));
 		int interval=1;
 		
-		double target = Integer.parseInt(prop.getProperty("ULTRA_NF_TARGET"));
-		double stopLoss = Integer.parseInt(prop.getProperty("ULTRA_NF_STOPLOSS"));
+		double target = Integer.parseInt(prop.getProperty("ALPHA_NF_TARGET"));
+		double stopLoss = Integer.parseInt(prop.getProperty("ALPHA_NF_STOPLOSS"));
 		
 		String instrument="",instrumentCE="";
 		String instrumentID="";
@@ -119,7 +119,7 @@ public class OptionAlphaNFCE implements Runnable{
 		
 		try {
 		
-			rs=stmt.executeQuery("Select name,instrumentId,exchangeToken from option_trade_instrument where ltp>="+Integer.parseInt(prop.getProperty("ULTRA_NF_OPTION_PRICE"))+" and name like 'NIFTY%00CE' order by ltp asc limit 1;");
+			rs=stmt.executeQuery("Select name,instrumentId,exchangeToken from option_trade_instrument where ltp>="+Integer.parseInt(prop.getProperty("ALPHA_NF_OPTION_PRICE"))+" and name like 'NIFTY%00CE' order by ltp asc limit 1;");
 			
 			while(rs.next()) {
 				
@@ -156,8 +156,8 @@ public class OptionAlphaNFCE implements Runnable{
 				
 				currentTime = LocalDateTime.now();
 				
-				String dateStrStart = currentTime.format(formatter_date).toString()+" "+prop.getProperty("ULTRA_NF_START_TIME");
-				String dateStrEnd = currentTime.format(formatter_date).toString()+" "+prop.getProperty("ULTRA_NF_START_TIME");
+				String dateStrStart = currentTime.format(formatter_date).toString()+" "+prop.getProperty("ALPHA_NF_START_TIME");
+				String dateStrEnd = currentTime.format(formatter_date).toString()+" "+prop.getProperty("ALPHA_NF_START_TIME");
 				
 				System.out.println("Start Time : "+dateStrStart);
 				System.out.println("End Time : "+dateStrEnd);
@@ -276,8 +276,8 @@ public class OptionAlphaNFCE implements Runnable{
 						orderFilled=true;
 					}
 					
-					target = Integer.parseInt(prop.getProperty("ULTRA_NF_TARGET"));
-					stopLoss = Integer.parseInt(prop.getProperty("ULTRA_NF_STOPLOSS"));
+					target = Integer.parseInt(prop.getProperty("ALPHA_NF_TARGET"));
+					stopLoss = Integer.parseInt(prop.getProperty("ALPHA_NF_STOPLOSS"));
 					
 					if(CE_Price>=entryPrice+target || CE_Price<=entryPrice-stopLoss || (LocalDateTime.now().getHour()==15 && LocalDateTime.now().getMinute()==15)) {
 													
@@ -389,9 +389,9 @@ public class OptionAlphaNFCE implements Runnable{
 				
 				try {
 					
-					System.out.println("Select bid_ask_ratio from algotrade.option_bid_ask_data where option_type='NF_CE' and timestamp = '"+currentTime.format(formatter_date)+" "+prop.getProperty("ULTRA_NF_START_TIME")+"';");
+					System.out.println("Select bid_ask_ratio from algotrade.option_bid_ask_data where option_type='NF_CE' and timestamp = '"+currentTime.format(formatter_date)+" "+prop.getProperty("ALPHA_NF_START_TIME")+"';");
 				
-					rs = stmt.executeQuery("Select bid_ask_ratio from algotrade.option_bid_ask_data where option_type='NF_CE' and timestamp = '"+currentTime.format(formatter_date)+" "+prop.getProperty("ULTRA_NF_START_TIME")+"';");
+					rs = stmt.executeQuery("Select bid_ask_ratio from algotrade.option_bid_ask_data where option_type='NF_CE' and timestamp = '"+currentTime.format(formatter_date)+" "+prop.getProperty("ALPHA_NF_START_TIME")+"';");
 					
 					while(rs.next()) {
 						
@@ -427,7 +427,7 @@ public class OptionAlphaNFCE implements Runnable{
 				OIAnalysisCompleted=true;
 				
 				try {
-					rs=stmt.executeQuery("Select 5min,10min,15min,30min from option_oi_analysis where instrument='NIFTY' and timestamp='"+currentTime.format(formatter_date)+" "+prop.getProperty("ULTRA_NF_START_TIME")+"';");
+					rs=stmt.executeQuery("Select 5min,10min,15min,30min from option_oi_analysis where instrument='NIFTY' and timestamp='"+currentTime.format(formatter_date)+" "+prop.getProperty("ALPHA_NF_START_TIME")+"';");
 					
 					
 					while(rs.next()) {

@@ -24,7 +24,7 @@ import com.zerodhatech.kiteconnect.KiteConnect;
 import com.zerodhatech.kiteconnect.kitehttp.exceptions.KiteException;
 
 
-public class OptionUltraNFPE implements Runnable{
+public class OptionAlphaNFPE implements Runnable{
 
 	public void run() {
 		

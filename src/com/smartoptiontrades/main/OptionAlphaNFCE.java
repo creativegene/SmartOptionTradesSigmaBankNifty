@@ -32,7 +32,7 @@ import com.zerodhatech.kiteconnect.kitehttp.exceptions.KiteException;
 import com.zerodhatech.models.Quote;
 
 
-public class OptionUltraNFCE implements Runnable{
+public class OptionAlphaNFCE implements Runnable{
 
 	public void run() {
 		

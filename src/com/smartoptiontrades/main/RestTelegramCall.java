@@ -9,7 +9,7 @@ public class RestTelegramCall {
 	
 	RestTelegramCall(){
 		
-		this.id="-1001624588065"; //Ultra NF Channel
+		this.id="-1001516229176"; //Alpha Nifty Channel
 		
 		this.id_support="-1001189655442"; //Support Channel
 		

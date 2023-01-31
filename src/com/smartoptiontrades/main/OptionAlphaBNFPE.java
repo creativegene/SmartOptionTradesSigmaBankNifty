@@ -32,35 +32,40 @@ import com.zerodhatech.kiteconnect.kitehttp.exceptions.KiteException;
 import com.zerodhatech.models.Quote;
 
 
-public class OptionAlphaNFCE implements Runnable{
+public class OptionAlphaBNFPE implements Runnable{
 
 	public void run() {
 		
-		boolean startCEModule = true;
+		boolean startPEModule = true;
 		Properties prop = new GetPropertiesObject().retrieve();
 		
 		int quantity=Integer.parseInt(prop.getProperty("ALPHA_NF_QTY"));
-		int interval=1;
+		int interval=Integer.parseInt(prop.getProperty("ALPHA_NF_INTERVAL"));
 		
 		double target = Integer.parseInt(prop.getProperty("ALPHA_NF_TARGET"));
 		double stopLoss = Integer.parseInt(prop.getProperty("ALPHA_NF_STOPLOSS"));
 		
-		String instrument="",instrumentCE="";
+		String instrument="",instrumentPE="";
 		String instrumentID="";
 		String instrumentExID="";
-		double CE_Init_Price=0.0,CE_Price=0.0;
+		double PE_Init_Price=0.0,PE_Price=0.0,Fut_Price=0.0;
 		
+		boolean triggerEvaluated=false;
+		boolean triggerValidated = false;
 		boolean bidaskValidation=true;
 		boolean bidaskValidationCompleted = false;
 		
 		boolean OIAnalysisCompleted = false;
 		boolean OISupportTrade = false;
+		boolean pe_trade = Boolean.getBoolean(prop.getProperty("ALPHA_NF_PE_TRADE"));
 		
+		double open=0,high=0,low=0,close=0;
+		String startTime = "";
 		
 		TimeSeries series = new BaseTimeSeries("Series");
 		
 		DateTimeFormatter formatter_date = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 		
 		KiteConnect kiteConnect=null;
 		
@@ -78,20 +83,22 @@ public class OptionAlphaNFCE implements Runnable{
 			e1.printStackTrace();
 		}
 		
-		Connection con = null, con_sat=null;
+		Connection con = null, con_sat=null, con_tdb=null;
 		
 		try {
 			con = DriverManager.getConnection(prop.getProperty("DB_CONNECT_STRING"),prop.getProperty("DB_USER"),prop.getProperty("DB_PASSWORD"));
 			con_sat = DriverManager.getConnection(prop.getProperty("DB_CONNECT_STRING_SAT"),prop.getProperty("DB_USER_SAT"),prop.getProperty("DB_PASSWORD_SAT"));
+			con_tdb = DriverManager.getConnection(prop.getProperty("DB_CONNECT_STRING_TICKDATA"),prop.getProperty("DB_USER_TICKDATA"),prop.getProperty("DB_PASSWORD_TICKDATA"));
 		} catch (SQLException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		Statement stmt = null, stmt_sat=null;
+		Statement stmt = null, stmt_sat=null, stmt_tdb=null;
 		
 		try {
 			stmt = con.createStatement();
 			stmt_sat = con_sat.createStatement();
+			stmt_tdb = con_tdb.createStatement();
 		} catch (SQLException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -119,61 +126,100 @@ public class OptionAlphaNFCE implements Runnable{
 		
 		try {
 		
-			rs=stmt.executeQuery("Select name,instrumentId,exchangeToken from option_trade_instrument where ltp>="+Integer.parseInt(prop.getProperty("ALPHA_NF_OPTION_PRICE"))+" and name like 'NIFTY%00CE' order by ltp asc limit 1;");
+			rs=stmt.executeQuery("Select name,instrumentId,exchangeToken from option_trade_instrument where ltp>="+Integer.parseInt(prop.getProperty("ALPHA_NF_OPTION_PRICE"))+" and name like 'NIFTY%00PE' order by ltp asc limit 1;");
 			
 			while(rs.next()) {
 				
 				instrument=rs.getString(1);
-				instrumentCE=rs.getString(1);
+				instrumentPE=rs.getString(1);
 				instrumentID=rs.getString(2);
 				instrumentExID=rs.getString(3);
 				
 			}
 			
-			System.out.println(LocalDateTime.now()+"| Option CE Instrument | "+instrument);
+			System.out.println(LocalDateTime.now()+"| Option PE Instrument | "+instrument);
 			
 		}catch (SQLException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 		}
 		
-		LocalDateTime currentTime = LocalDateTime.now();	
-		
-		prop = new GetPropertiesObject().retrieve();
-
-		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		while(startCEModule) {
+		while(startPEModule) {
 			
-			//System.out.println(LocalDateTime.now()+" : System CE Running");
-			
-			if(LocalDateTime.now().getSecond()==0 && OISupportTrade && bidaskValidation){
-				
-				currentTime = LocalDateTime.now();
+			prop = new GetPropertiesObject().retrieve();
+			LocalDateTime currentTime = LocalDateTime.now();
+			//System.out.println(LocalDateTime.now()+" : System PE Running");
+			if(!triggerEvaluated) {	
 				
 				String dateStrStart = currentTime.format(formatter_date).toString()+" "+prop.getProperty("ALPHA_NF_START_TIME");
-				String dateStrEnd = currentTime.format(formatter_date).toString()+" "+prop.getProperty("ALPHA_NF_START_TIME");
+				String dateStrEnd = currentTime.format(formatter_date).toString()+" "+prop.getProperty("ALPHA_NF_END_TIME");
 				
 				System.out.println("Start Time : "+dateStrStart);
 				System.out.println("End Time : "+dateStrEnd);
 								
-				series= new KiteHistoricalData().retrieve(kiteConnect,dateStrStart,dateStrEnd,instrumentID,"1minute");
+				series= new KiteHistoricalData().retrieve(kiteConnect,dateStrStart,dateStrEnd,prop.getProperty("ALPHA_NF_FUT_ID"),"1minute");
 				
-				int barCount = series.getBarCount();
+				for(int i=0;i<series.getBarCount();i++) {
+					
+					/*
+					System.out.println(series.getBar(i).getBeginTime()+"|"+series.getBar(i).getOpenPrice()+"|"+series.getBar(i).getMaxPrice()
+							+"|"+series.getBar(i).getMinPrice()+"|"+series.getBar(i).getClosePrice());
+					*/
+					if(i==0) {
+						startTime=series.getBar(i).getBeginTime().format(formatter);
+						open=series.getBar(i).getOpenPrice().doubleValue();
+						high=series.getBar(i).getMaxPrice().doubleValue();
+						low=series.getBar(i).getMinPrice().doubleValue();
+						close=series.getBar(i).getClosePrice().doubleValue();
+					}
+					
+					if(series.getBar(i).getMaxPrice().doubleValue()>high) {
+						high=series.getBar(i).getMaxPrice().doubleValue();
+					}
+					if(series.getBar(i).getMinPrice().doubleValue()<low) {
+						low=series.getBar(i).getMinPrice().doubleValue();
+					}
+					
+					close=series.getBar(i).getClosePrice().doubleValue();
+				}
+				System.out.println("------------------NIFTY FUTURE "+prop.getProperty("ALPHA_NF_START_TIME")+" "+prop.getProperty("ALPHA_NF_INTERVAL")+"min Candlestick PE------------------");
+				System.out.println(startTime+"|"+open+"|"+high+"|"+low+"|"+close);
+				triggerEvaluated=true;
+			}
 			
-				System.out.println(LocalDateTime.now()+" | CE Bar Count = "+barCount);
-				System.out.println(LocalDateTime.now()+"|"+instrument+"|"+series.getBar(barCount-1).getBeginTime()+"|"+series.getBar(barCount-1).getOpenPrice()+"|"+series.getBar(barCount-1).getMaxPrice()
-						+"|"+series.getBar(barCount-1).getMinPrice()+"|"+series.getBar(barCount-1).getClosePrice()+"|"+series.getBar(barCount-1).getVolume());
+			if(triggerEvaluated && pe_trade) {
 				
+				try {
+					Fut_Price=getLTP(kiteConnect, prop.getProperty("ALPHA_NF_FUT_ID"));
+				} catch (IOException | KiteException e) {
+					// TODO Auto-generated catch block
+					// TODO Auto-generated catch block
+					StringWriter sw = new StringWriter();
+		            e.printStackTrace(new PrintWriter(sw));
+		            String exceptionAsString = sw.toString();
+		            System.out.println(exceptionAsString);
+				}
+				if(Fut_Price<=low) {
+					triggerValidated=true;
+					try {
+						PE_Init_Price=getLTP(kiteConnect, instrumentID);
+						System.out.println(LocalDateTime.now()+" : PE Trade Triggered Fut Price="+Fut_Price+" PE Price="+PE_Init_Price);
+					} catch (IOException | KiteException e) {
+						// TODO Auto-generated catch block
+						// TODO Auto-generated catch block
+						StringWriter sw = new StringWriter();
+			            e.printStackTrace(new PrintWriter(sw));
+			            String exceptionAsString = sw.toString();
+			            System.out.println(exceptionAsString);
+					}
+				}
+			}
+			
+			if(triggerValidated && OISupportTrade && bidaskValidation && pe_trade){
 				
 				ExecutorService executor = Executors.newFixedThreadPool(50);
 				
-				double entryPrice = series.getBar(barCount-1).getClosePrice().doubleValue();
+				//double entryPrice = series.getBar(barCount-1).getClosePrice().doubleValue();
 				
 				for (Map.Entry<String, KiteConnect> entry : kiteUserMap.entrySet()) {
 					
@@ -181,7 +227,7 @@ public class OptionAlphaNFCE implements Runnable{
 						
 						KiteConnect kiteConnection = (KiteConnect)entry.getValue();
 			    	    
-			    	    executor.execute(new ZerodhaEntryOrderPlacement(instrumentCE,quantity,"BUY","NRML",entryPrice,kiteConnection));
+			    	    executor.execute(new ZerodhaEntryOrderPlacement(instrumentPE,quantity,"BUY","NRML",PE_Init_Price,kiteConnection));
 		    	    
 					}catch(Exception e) {
 						
@@ -196,7 +242,7 @@ public class OptionAlphaNFCE implements Runnable{
 					
 					try {
 						
-						executor.execute(new AliceEntryOrderPlacement((String)entry.getKey(),(String)entry.getValue(),instrumentCE,"NRML",instrumentExID,quantity,"BUY",entryPrice));
+						executor.execute(new AliceEntryOrderPlacement((String)entry.getKey(),(String)entry.getValue(),instrumentPE,"NRML",instrumentExID,quantity,"BUY",PE_Init_Price));
 					
 					}catch(Exception e) {
 					
@@ -214,28 +260,10 @@ public class OptionAlphaNFCE implements Runnable{
 					
 				LocalDateTime orderTime = LocalDateTime.now();
 					
-				System.out.println(LocalDateTime.now()+" : CE Order Placed");
-					
-				try {
-					CE_Init_Price=getLTP(kiteConnect, instrumentID);
-				} catch (IOException | KiteException e) {
-					// TODO Auto-generated catch block
-					// TODO Auto-generated catch block
-					StringWriter sw = new StringWriter();
-		            e.printStackTrace(new PrintWriter(sw));
-		            String exceptionAsString = sw.toString();
-		            System.out.println(exceptionAsString);
-		            
-		            try {
-		    			kiteConnect = new GetKiteConnect().retrieve();
-		    		} catch (ClassNotFoundException | SQLException e1) {
-		    			// TODO Auto-generated catch block
-		    			System.out.println(LocalDateTime.now()+" : CE Error in re-initalizing Kite connect");
-		    		}
-				}
+				System.out.println(LocalDateTime.now()+" : PE Order Placed");
 				
 				try {
-					new RestTelegramCall().send("BUYING%20"+instrumentCE+"%20@%20"+entryPrice);
+					new RestTelegramCall().send("BUYING%20"+instrumentPE+"%20@%20"+PE_Init_Price);
 				} catch (Exception e2) {
 					// TODO Auto-generated catch block
 					e2.printStackTrace();
@@ -248,7 +276,8 @@ public class OptionAlphaNFCE implements Runnable{
 					prop = new GetPropertiesObject().retrieve();
 					
 					try {
-						CE_Price=getLTP(kiteConnect, instrumentID);
+						PE_Price=getLTP(kiteConnect, instrumentID);
+						Fut_Price=getLTP(kiteConnect, prop.getProperty("ALPHA_NF_FUT_ID"));
 					} catch (IOException | KiteException e) {
 						// TODO Auto-generated catch block
 						StringWriter sw = new StringWriter();
@@ -260,14 +289,14 @@ public class OptionAlphaNFCE implements Runnable{
 			    			kiteConnect = new GetKiteConnect().retrieve();
 			    		} catch (ClassNotFoundException | SQLException e1) {
 			    			// TODO Auto-generated catch block
-			    			System.out.println(LocalDateTime.now()+" : CE Error in re-initalizing Kite connect");
+			    			System.out.println(LocalDateTime.now()+" : PE Error in re-initalizing Kite connect");
 			    		}
 					}
 					
-					if(CE_Price<entryPrice && !orderFilled) {
+					if(PE_Price<PE_Init_Price && !orderFilled) {
 						
 						try {
-							new RestTelegramCall().sendUpdate("ORDER EXECUTED%20"+instrumentCE+"%20@%20"+entryPrice);
+							new RestTelegramCall().sendUpdate("ORDER EXECUTED%20"+instrumentPE+"%20@%20"+PE_Init_Price);
 						} catch (Exception e2) {
 							// TODO Auto-generated catch block
 							e2.printStackTrace();
@@ -279,7 +308,7 @@ public class OptionAlphaNFCE implements Runnable{
 					target = Integer.parseInt(prop.getProperty("ALPHA_NF_TARGET"));
 					stopLoss = Integer.parseInt(prop.getProperty("ALPHA_NF_STOPLOSS"));
 					
-					if(CE_Price>=entryPrice+target || CE_Price<=entryPrice-stopLoss || (LocalDateTime.now().getHour()==15 && LocalDateTime.now().getMinute()==15)) {
+					if(Fut_Price<=low-target || Fut_Price>=low+stopLoss || Fut_Price>=high || (LocalDateTime.now().getHour()==15 && LocalDateTime.now().getMinute()==15)) {
 													
 						executor = Executors.newFixedThreadPool(Integer.parseInt(prop.getProperty("THREAD_COUNT")));
 						
@@ -289,7 +318,7 @@ public class OptionAlphaNFCE implements Runnable{
 								
 								KiteConnect kiteConnection = (KiteConnect)entry.getValue();
 					    	    
-					    	    executor.execute(new ZerodhaExitOrderPlacement(instrumentCE,quantity,"SELL","NRML",0.0,kiteConnection));
+					    	    executor.execute(new ZerodhaExitOrderPlacement(instrumentPE,quantity,"SELL","NRML",0.0,kiteConnection));
 				    	    
 							}catch(Exception e) {
 								
@@ -304,7 +333,7 @@ public class OptionAlphaNFCE implements Runnable{
 							
 							try {
 								
-								executor.execute(new AliceExitOrderPlacement((String)entry.getKey(),(String)entry.getValue(),instrumentCE,"NRML",instrumentExID,quantity,"SELL",0.0));
+								executor.execute(new AliceExitOrderPlacement((String)entry.getKey(),(String)entry.getValue(),instrumentPE,"NRML",instrumentExID,quantity,"SELL",0.0));
 							
 							}catch(Exception e) {
 							
@@ -322,7 +351,7 @@ public class OptionAlphaNFCE implements Runnable{
 								
 								KiteConnect kiteConnection = (KiteConnect)entry.getValue();
 					    	    
-					    	    executor.execute(new ZerodhaCancelLimitOrder(instrumentCE,kiteConnection));
+					    	    executor.execute(new ZerodhaCancelLimitOrder(instrumentPE,kiteConnection));
 				    	    
 							}catch(Exception e) {
 								
@@ -337,7 +366,7 @@ public class OptionAlphaNFCE implements Runnable{
 							
 							try {
 								
-								executor.execute(new AliceCancelLimitOrder((String)entry.getKey(),(String)entry.getValue(),instrumentCE));
+								executor.execute(new AliceCancelLimitOrder((String)entry.getKey(),(String)entry.getValue(),instrumentPE));
 							
 							}catch(Exception e) {
 							
@@ -349,15 +378,15 @@ public class OptionAlphaNFCE implements Runnable{
 							
 						}
 						
-						System.out.println(LocalDateTime.now()+" : Order Exiting CE Initial Price="+CE_Init_Price+" | CE Current Price="+CE_Price);
+						System.out.println(LocalDateTime.now()+" : Order Exiting PE Initial Price="+PE_Init_Price+" | PE Current Price="+PE_Price);
 						
 						executor.shutdown();
 
 						orderPlaced=false;
-						startCEModule=false;
+						startPEModule=false;
 						
 						try {
-							new RestTelegramCall().send("SELLING%20"+instrumentCE+"%20@%20"+CE_Price);
+							new RestTelegramCall().send("SELLING%20"+instrumentPE+"%20@%20"+PE_Price);
 						} catch (Exception e2) {
 							// TODO Auto-generated catch block
 							e2.printStackTrace();
@@ -365,7 +394,7 @@ public class OptionAlphaNFCE implements Runnable{
 						
 						if(orderFilled) {
 							try {
-								stmt.executeUpdate("insert into algotrade.strategy_order_book values ('Ultra NF','"+instrument+"','"+orderTime+"',"+entryPrice+",'"+currentTime+"',"+CE_Price+");");
+								stmt.executeUpdate("insert into algotrade.strategy_order_book values ('Alpha Nifty','"+instrument+"','"+orderTime+"',"+PE_Init_Price+",'"+currentTime+"',"+PE_Price+");");
 							} catch (SQLException e) {
 								// TODO Auto-generated catch block
 								e.printStackTrace();
@@ -385,49 +414,48 @@ public class OptionAlphaNFCE implements Runnable{
 					
 			}
 			
-			if(LocalDateTime.now().getSecond()==15 && !bidaskValidationCompleted) {
+			if(LocalDateTime.now().getSecond()==15 && pe_trade) {
 				
 				try {
 					
-					System.out.println("Select bid_ask_ratio from algotrade.option_bid_ask_data where option_type='NF_CE' and timestamp = '"+currentTime.format(formatter_date)+" "+prop.getProperty("ALPHA_NF_START_TIME")+"';");
+					//System.out.println("Select avg(bid_qty/ask_qty) from tickdata where id="+instrumentID+" and timestamp >= '"+currentTime.minusSeconds(30).format(formatter)+"';");
 				
-					rs = stmt.executeQuery("Select bid_ask_ratio from algotrade.option_bid_ask_data where option_type='NF_CE' and timestamp = '"+currentTime.format(formatter_date)+" "+prop.getProperty("ALPHA_NF_START_TIME")+"';");
+					rs = stmt_tdb.executeQuery("Select avg(bid_qty/ask_qty) from tickdata where id="+instrumentID+" and timestamp >= '"+currentTime.minusSeconds(30).format(formatter)+"';");
 					
 					while(rs.next()) {
 						
 						if(Double.parseDouble(rs.getString(1))>=1) {
 							
 							bidaskValidation=true;
+							System.out.println(LocalDateTime.now()+" : PE Bid Ask "+rs.getString(1)+" Validation => "+bidaskValidation);
 							
 						}else {
 							
 							bidaskValidation=false;
-							
+							System.out.println(LocalDateTime.now()+" : PE Bid Ask "+rs.getString(1)+" Validation => "+bidaskValidation);
 						}
 						
 					}
 					
-					bidaskValidation=true;
-					bidaskValidationCompleted=true;
-					
-					System.out.println(LocalDateTime.now()+" : CE Bid Ask Validation "+bidaskValidation);
-		                	
+					//bidaskValidation=true;
+					//bidaskValidationCompleted=true;		                	
 	            
 				}catch(Exception e) {
 					
 					e.printStackTrace();
+					System.out.println(LocalDateTime.now()+" : Error in tickdata connection");
 					
 				}
 				
 			}
 			
-			if(LocalDateTime.now().getSecond()==30 && !OIAnalysisCompleted) {
+			if(LocalDateTime.now().getSecond()==30 && pe_trade) {
 				
 				int countCEPoint=0,countPEPoint=0;
-				OIAnalysisCompleted=true;
+				//OIAnalysisCompleted=true;
 				
 				try {
-					rs=stmt.executeQuery("Select 5min,10min,15min,30min from option_oi_analysis where instrument='NIFTY' and timestamp='"+currentTime.format(formatter_date)+" "+prop.getProperty("ALPHA_NF_START_TIME")+"';");
+					rs=stmt.executeQuery("Select 5min,10min,15min,'NA' from option_oi_analysis where instrument='NIFTY' order by timestamp desc limit 1;");
 					
 					
 					while(rs.next()) {
@@ -469,15 +497,15 @@ public class OptionAlphaNFCE implements Runnable{
 					
 				
 				
-				System.out.println(LocalDateTime.now()+" CE Point = "+countCEPoint);
+				System.out.println(LocalDateTime.now()+" PE Point = "+countPEPoint);
 				//System.out.println(LocalDateTime.now()+" PE Point = "+countPEPoint);
 				
-				if(countCEPoint>countPEPoint) {
+				if(countPEPoint>countCEPoint) {
 					OISupportTrade=true;
-					System.out.println(LocalDateTime.now()+" : OI Support CE Trade");
+					System.out.println(LocalDateTime.now()+" : OI Support PE Trade");
 				}else {
 					OISupportTrade=false;
-					System.out.println(LocalDateTime.now()+" : OI Does Not Support CE Trade");
+					System.out.println(LocalDateTime.now()+" : OI Does Not Support PE Trade");
 				}
 				
 			}
@@ -503,12 +531,19 @@ public class OptionAlphaNFCE implements Runnable{
 			
 			if(LocalDateTime.now().getHour()==15 && LocalDateTime.now().getMinute()>=10) {
 				
-				startCEModule=false;
+				startPEModule=false;
 				
 			}
 			
 		}
-			
+		
+		try {
+			con.close();
+			con_sat.close();
+			con_tdb.close();
+		}catch(Exception e) {
+			System.out.println(LocalDateTime.now()+" : Error in closing connection");
+		}
 	}
 
 	

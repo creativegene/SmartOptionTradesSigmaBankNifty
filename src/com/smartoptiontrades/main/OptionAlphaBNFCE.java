@@ -39,11 +39,11 @@ public class OptionAlphaBNFCE implements Runnable{
 		boolean startCEModule = true;
 		Properties prop = new GetPropertiesObject().retrieve();
 		
-		int quantity=Integer.parseInt(prop.getProperty("ALPHA_NF_QTY"));
-		int interval=Integer.parseInt(prop.getProperty("ALPHA_NF_INTERVAL"));
+		int quantity=Integer.parseInt(prop.getProperty("ALPHA_BNF_QTY"));
+		int interval=Integer.parseInt(prop.getProperty("ALPHA_BNF_INTERVAL"));
 		
-		double target = Integer.parseInt(prop.getProperty("ALPHA_NF_TARGET"));
-		double stopLoss = Integer.parseInt(prop.getProperty("ALPHA_NF_STOPLOSS"));		
+		double target = Integer.parseInt(prop.getProperty("ALPHA_BNF_TARGET"));
+		double stopLoss = Integer.parseInt(prop.getProperty("ALPHA_BNF_STOPLOSS"));		
 		
 		String instrument="",instrumentCE="";
 		String instrumentID="";
@@ -57,7 +57,7 @@ public class OptionAlphaBNFCE implements Runnable{
 		
 		boolean OIAnalysisCompleted = false;
 		boolean OISupportTrade = false;
-		boolean ce_trade = Boolean.getBoolean(prop.getProperty("ALPHA_NF_CE_TRADE"));
+		boolean ce_trade = Boolean.getBoolean(prop.getProperty("ALPHA_BNF_CE_TRADE"));
 		
 		double open=0,high=0,low=0,close=0;
 		String startTime = "";
@@ -126,7 +126,7 @@ public class OptionAlphaBNFCE implements Runnable{
 		
 		try {
 		
-			rs=stmt.executeQuery("Select name,instrumentId,exchangeToken from option_trade_instrument where ltp>="+Integer.parseInt(prop.getProperty("ALPHA_NF_OPTION_PRICE"))+" and name like 'NIFTY%00CE' order by ltp asc limit 1;");
+			rs=stmt.executeQuery("Select name,instrumentId,exchangeToken from option_trade_instrument where ltp>="+Integer.parseInt(prop.getProperty("ALPHA_BNF_OPTION_PRICE"))+" and name like 'BANKNIFTY%00CE' order by ltp asc limit 1;");
 			
 			while(rs.next()) {
 				
@@ -151,13 +151,13 @@ public class OptionAlphaBNFCE implements Runnable{
 			//System.out.println(LocalDateTime.now()+" : System CE Running");
 			if(!triggerEvaluated) {	
 				
-				String dateStrStart = currentTime.format(formatter_date).toString()+" "+prop.getProperty("ALPHA_NF_START_TIME");
-				String dateStrEnd = currentTime.format(formatter_date).toString()+" "+prop.getProperty("ALPHA_NF_END_TIME");
+				String dateStrStart = currentTime.format(formatter_date).toString()+" "+prop.getProperty("ALPHA_BNF_START_TIME");
+				String dateStrEnd = currentTime.format(formatter_date).toString()+" "+prop.getProperty("ALPHA_BNF_END_TIME");
 				
 				System.out.println("Start Time : "+dateStrStart);
 				System.out.println("End Time : "+dateStrEnd);
 								
-				series= new KiteHistoricalData().retrieve(kiteConnect,dateStrStart,dateStrEnd,prop.getProperty("ALPHA_NF_FUT_ID"),"1minute");
+				series= new KiteHistoricalData().retrieve(kiteConnect,dateStrStart,dateStrEnd,prop.getProperty("ALPHA_BNF_FUT_ID"),"1minute");
 				
 				for(int i=0;i<series.getBarCount();i++) {
 					
@@ -182,7 +182,7 @@ public class OptionAlphaBNFCE implements Runnable{
 					
 					close=series.getBar(i).getClosePrice().doubleValue();
 				}
-				System.out.println("------------------NIFTY FUTURE "+prop.getProperty("ALPHA_NF_START_TIME")+" "+prop.getProperty("ALPHA_NF_INTERVAL")+"min Candlestick------------------");
+				System.out.println("------------------NIFTY FUTURE "+prop.getProperty("ALPHA_BNF_START_TIME")+" "+prop.getProperty("ALPHA_BNF_INTERVAL")+"min Candlestick------------------");
 				System.out.println(startTime+"|"+open+"|"+high+"|"+low+"|"+close);
 				triggerEvaluated=true;
 			}
@@ -190,7 +190,7 @@ public class OptionAlphaBNFCE implements Runnable{
 			if(triggerEvaluated && ce_trade) {
 				
 				try {
-					Fut_Price=getLTP(kiteConnect, prop.getProperty("ALPHA_NF_FUT_ID"));
+					Fut_Price=getLTP(kiteConnect, prop.getProperty("ALPHA_BNF_FUT_ID"));
 				} catch (IOException | KiteException e) {
 					// TODO Auto-generated catch block
 					// TODO Auto-generated catch block
@@ -277,7 +277,7 @@ public class OptionAlphaBNFCE implements Runnable{
 					
 					try {
 						CE_Price=getLTP(kiteConnect, instrumentID);
-						Fut_Price=getLTP(kiteConnect, prop.getProperty("ALPHA_NF_FUT_ID"));
+						Fut_Price=getLTP(kiteConnect, prop.getProperty("ALPHA_BNF_FUT_ID"));
 					} catch (IOException | KiteException e) {
 						// TODO Auto-generated catch block
 						StringWriter sw = new StringWriter();
@@ -305,8 +305,8 @@ public class OptionAlphaBNFCE implements Runnable{
 						orderFilled=true;
 					}
 					
-					target = Integer.parseInt(prop.getProperty("ALPHA_NF_TARGET"));
-					stopLoss = Integer.parseInt(prop.getProperty("ALPHA_NF_STOPLOSS"));
+					target = Integer.parseInt(prop.getProperty("ALPHA_BNF_TARGET"));
+					stopLoss = Integer.parseInt(prop.getProperty("ALPHA_BNF_STOPLOSS"));
 					
 					if(Fut_Price>=high+target || Fut_Price<=high-stopLoss || Fut_Price<low || (LocalDateTime.now().getHour()==15 && LocalDateTime.now().getMinute()==15)) {
 													
@@ -455,7 +455,7 @@ public class OptionAlphaBNFCE implements Runnable{
 				//OIAnalysisCompleted=true;
 				
 				try {
-					rs=stmt.executeQuery("Select 5min,10min,15min,'NA' from option_oi_analysis where instrument='NIFTY' order by timestamp desc limit 1;");
+					rs=stmt.executeQuery("Select 5min,10min,15min,'NA' from option_oi_analysis where instrument='BANKNIFTY' order by timestamp desc limit 1;");
 					
 					
 					while(rs.next()) {

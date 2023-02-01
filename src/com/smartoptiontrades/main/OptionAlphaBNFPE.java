@@ -57,7 +57,12 @@ public class OptionAlphaBNFPE implements Runnable{
 		
 		boolean OIAnalysisCompleted = false;
 		boolean OISupportTrade = false;
-		boolean pe_trade = Boolean.getBoolean(prop.getProperty("ALPHA_BNF_PE_TRADE"));
+		boolean pe_trade = Boolean.parseBoolean(prop.getProperty("ALPHA_BNF_PE_TRADE"));
+		
+		if(pe_trade) {
+			System.out.println(LocalDateTime.now()+" : PE Trade Activated");
+		}else 
+			System.out.println(LocalDateTime.now()+" : PE Trade De-Activated");
 		
 		double open=0,high=0,low=0,close=0;
 		String startTime = "";
@@ -182,12 +187,12 @@ public class OptionAlphaBNFPE implements Runnable{
 					
 					close=series.getBar(i).getClosePrice().doubleValue();
 				}
-				System.out.println("------------------NIFTY FUTURE "+prop.getProperty("ALPHA_BNF_START_TIME")+" "+prop.getProperty("ALPHA_BNF_INTERVAL")+"min Candlestick PE------------------");
+				System.out.println("------------------BANK NIFTY FUTURE "+prop.getProperty("ALPHA_BNF_START_TIME")+" "+prop.getProperty("ALPHA_BNF_INTERVAL")+"min Candlestick PE------------------");
 				System.out.println(startTime+"|"+open+"|"+high+"|"+low+"|"+close);
 				triggerEvaluated=true;
 			}
 			
-			if(triggerEvaluated && pe_trade) {
+			if(triggerEvaluated && bidaskValidation && pe_trade) {
 				
 				try {
 					Fut_Price=getLTP(kiteConnect, prop.getProperty("ALPHA_BNF_FUT_ID"));
@@ -215,7 +220,7 @@ public class OptionAlphaBNFPE implements Runnable{
 				}
 			}
 			
-			if(triggerValidated && OISupportTrade && bidaskValidation && pe_trade){
+			if(triggerValidated && bidaskValidation && pe_trade){
 				
 				ExecutorService executor = Executors.newFixedThreadPool(50);
 				
@@ -227,7 +232,7 @@ public class OptionAlphaBNFPE implements Runnable{
 						
 						KiteConnect kiteConnection = (KiteConnect)entry.getValue();
 			    	    
-			    	    executor.execute(new ZerodhaEntryOrderPlacement(instrumentPE,quantity,"BUY","NRML",PE_Init_Price,kiteConnection));
+			    	    executor.execute(new ZerodhaEntryOrderPlacement(instrumentPE,quantity,"BUY","MIS",PE_Init_Price,kiteConnection));
 		    	    
 					}catch(Exception e) {
 						
@@ -242,7 +247,7 @@ public class OptionAlphaBNFPE implements Runnable{
 					
 					try {
 						
-						executor.execute(new AliceEntryOrderPlacement((String)entry.getKey(),(String)entry.getValue(),instrumentPE,"NRML",instrumentExID,quantity,"BUY",PE_Init_Price));
+						executor.execute(new AliceEntryOrderPlacement((String)entry.getKey(),(String)entry.getValue(),instrumentPE,"MIS",instrumentExID,quantity,"BUY",PE_Init_Price));
 					
 					}catch(Exception e) {
 					
@@ -318,7 +323,7 @@ public class OptionAlphaBNFPE implements Runnable{
 								
 								KiteConnect kiteConnection = (KiteConnect)entry.getValue();
 					    	    
-					    	    executor.execute(new ZerodhaExitOrderPlacement(instrumentPE,quantity,"SELL","NRML",0.0,kiteConnection));
+					    	    executor.execute(new ZerodhaExitOrderPlacement(instrumentPE,quantity,"SELL","MIS",0.0,kiteConnection));
 				    	    
 							}catch(Exception e) {
 								
@@ -333,7 +338,7 @@ public class OptionAlphaBNFPE implements Runnable{
 							
 							try {
 								
-								executor.execute(new AliceExitOrderPlacement((String)entry.getKey(),(String)entry.getValue(),instrumentPE,"NRML",instrumentExID,quantity,"SELL",0.0));
+								executor.execute(new AliceExitOrderPlacement((String)entry.getKey(),(String)entry.getValue(),instrumentPE,"MIS",instrumentExID,quantity,"SELL",0.0));
 							
 							}catch(Exception e) {
 							
@@ -414,7 +419,7 @@ public class OptionAlphaBNFPE implements Runnable{
 					
 			}
 			
-			if(LocalDateTime.now().getSecond()==15 && pe_trade) {
+			if(LocalDateTime.now().getSecond()==15) {
 				
 				try {
 					
@@ -449,7 +454,7 @@ public class OptionAlphaBNFPE implements Runnable{
 				
 			}
 			
-			if(LocalDateTime.now().getSecond()==30 && pe_trade) {
+			if(LocalDateTime.now().getMinute()%5==0 && LocalDateTime.now().getSecond()==30) {
 				
 				int countCEPoint=0,countPEPoint=0;
 				//OIAnalysisCompleted=true;

@@ -60,9 +60,9 @@ public class OptionAlphaBNFCE implements Runnable{
 		boolean ce_trade = Boolean.parseBoolean(prop.getProperty("ALPHA_BNF_CE_TRADE"));
 		
 		if(ce_trade) {
-			System.out.println(LocalDateTime.now()+" : PE Trade Activated");
+			System.out.println(LocalDateTime.now()+" : CE Trade Activated");
 		}else 
-			System.out.println(LocalDateTime.now()+" : PE Trade De-Activated");
+			System.out.println(LocalDateTime.now()+" : CE Trade De-Activated");
 		
 		double open=0,high=0,low=0,close=0;
 		String startTime = "";
@@ -192,7 +192,7 @@ public class OptionAlphaBNFCE implements Runnable{
 				triggerEvaluated=true;
 			}
 			
-			if(triggerEvaluated && ce_trade) {
+			if(!triggerValidated && triggerEvaluated && ce_trade) {
 				
 				try {
 					Fut_Price=getLTP(kiteConnect, prop.getProperty("ALPHA_BNF_FUT_ID"));
@@ -247,7 +247,7 @@ public class OptionAlphaBNFCE implements Runnable{
 					
 					try {
 						
-						executor.execute(new AliceEntryOrderPlacement((String)entry.getKey(),(String)entry.getValue(),instrumentCE,"MIS",instrumentExID,quantity,"BUY",CE_Init_Price));
+						executor.execute(new AliceOrderPlacement((String)entry.getKey(),(String)entry.getValue(),instrumentCE,"MIS",instrumentExID,quantity,"BUY",CE_Init_Price));
 					
 					}catch(Exception e) {
 					

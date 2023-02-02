@@ -192,7 +192,7 @@ public class OptionAlphaBNFPE implements Runnable{
 				triggerEvaluated=true;
 			}
 			
-			if(triggerEvaluated && bidaskValidation && pe_trade) {
+			if(!triggerValidated && triggerEvaluated && bidaskValidation && pe_trade) {
 				
 				try {
 					Fut_Price=getLTP(kiteConnect, prop.getProperty("ALPHA_BNF_FUT_ID"));
@@ -247,7 +247,7 @@ public class OptionAlphaBNFPE implements Runnable{
 					
 					try {
 						
-						executor.execute(new AliceEntryOrderPlacement((String)entry.getKey(),(String)entry.getValue(),instrumentPE,"MIS",instrumentExID,quantity,"BUY",PE_Init_Price));
+						executor.execute(new AliceOrderPlacement((String)entry.getKey(),(String)entry.getValue(),instrumentPE,"MIS",instrumentExID,quantity,"BUY",PE_Init_Price));
 					
 					}catch(Exception e) {
 					

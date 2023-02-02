@@ -44,6 +44,7 @@ public class AliceCancelLimitOrder implements Runnable {
 
     private void searchBracketOrdertoCancel(String secretToken,String instrumentName) throws Exception {
 
+    	/*
         HttpGet request = new HttpGet("https://ant.aliceblueonline.com/api/v2/order");
 
         // add request headers
@@ -79,11 +80,12 @@ public class AliceCancelLimitOrder implements Runnable {
             
 
         }
-
+		*/
     }
     
     private void sendCancelOrder(String secretToken,String orderId) throws Exception {
-
+    	
+    	/*
         HttpDelete request = new HttpDelete("https://ant.aliceblueonline.com/api/v2/order?oms_order_id="+orderId+"&order_status=open");
 
         // add request headers
@@ -103,7 +105,7 @@ public class AliceCancelLimitOrder implements Runnable {
             }
 
         }
-
+		*/
     }
 
     

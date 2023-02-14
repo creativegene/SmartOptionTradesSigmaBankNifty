@@ -13,7 +13,8 @@ public class GetPropertiesObject {
 		
 		InputStream input = null;
 		Properties prop = new Properties();
-        String filename = "/niftyalgotrader/TraderBot/reference/smart_option_selling.properties";
+		String filename = "/niftyalgotrader/TraderBot/reference/smart_option_selling.properties";
+        //String filename = "D:/Google Drive/workspace/TraderBot/reference/config_testing.properties"; 
         
 		try {
 			input = new FileInputStream(filename);

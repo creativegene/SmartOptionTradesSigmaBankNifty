@@ -55,6 +55,7 @@ public class OptionZetaBNFPE implements Runnable{
 		boolean bidaskValidation=false;
 		boolean OISupportTrade = false;
 		boolean PE_trade = Boolean.parseBoolean(prop.getProperty("ZETA_BNF_PE_TRADE"));
+		boolean isExpiryDay=false;
 		
 		if(PE_trade) {
 			System.out.println(LocalDateTime.now()+" : PE Trade Activated");
@@ -127,6 +128,18 @@ public class OptionZetaBNFPE implements Runnable{
 		ResultSet rs = null;
 		
 		try {
+			
+			rs=stmt.executeQuery("Select count(*) from master_instrument_list where date_format(expiry,\"%Y-%m-%d\") = date_format(sysdate(),\"%Y-%m-%d\") and segment='NFO-OPT';");
+			
+			while(rs.next()) {
+				if(Integer.parseInt(rs.getString(1))>0) {
+					isExpiryDay = true;
+					System.out.println(LocalDateTime.now()+"Expiry Day Option BidAsk Validation will be Skipped");
+				}else {
+					isExpiryDay = false;
+				}
+					
+			}
 		
 			rs=stmt.executeQuery("Select name,instrumentID,exchangeToken from option_trade_instrument where ltp>="+Integer.parseInt(prop.getProperty("ZETA_BNF_OPTION_PRICE"))+" and name like 'BANKNIFTY%00PE' order by ltp asc limit 1;");
 			
@@ -522,7 +535,7 @@ public class OptionZetaBNFPE implements Runnable{
 					
 					while(rs.next()) {
 						
-						if(Double.parseDouble(rs.getString(1))<1) {
+						if(Double.parseDouble(rs.getString(1))<1 || isExpiryDay) {
 							
 							bidaskValidationPE=true;
 							System.out.println(LocalDateTime.now()+" : PE Short Bid Ask "+rs.getString(1)+" Validation => "+bidaskValidationPE);

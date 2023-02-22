@@ -128,13 +128,13 @@ public class OptionZetaBNFCE implements Runnable{
 		ResultSet rs = null;
 		
 		try {
-			
-			rs=stmt.executeQuery("Select count(*) from master_instrument_list where date_format(expiry,\"%Y-%m-%d\") = date_format(sysdate(),\"%Y-%m-%d\") and segment='NFO-OPT';");
+			 
+			rs=stmt.executeQuery("Select count(*) from master_instrument_list where date_format(expiry,\"%Y-%m-%d\") = date_format(sysdate(),\"%Y-%m-%d\") and tradingSymbol like 'BANKNIFTY%';");
 			
 			while(rs.next()) {
 				if(Integer.parseInt(rs.getString(1))>0) {
 					isExpiryDay = true;
-					System.out.println(LocalDateTime.now()+"Expiry Day Option BidAsk Validation will be Skipped");
+					System.out.println(LocalDateTime.now()+" : Expiry Day Option BidAsk Validation will be Skipped");
 				}else {
 					isExpiryDay = false;
 				}

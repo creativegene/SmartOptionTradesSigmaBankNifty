@@ -25,7 +25,7 @@ public HashMap<String,KiteConnect> retrieve () throws ClassNotFoundException, SQ
 		
 		Statement stmt=con.createStatement();
 		
-		ResultSet rs = stmt.executeQuery("Select userid,access_token,public_token,api_key,api_secret_key from algotrade.user_token_db where platform='ZERODHA' and userId='KUG028' and is_day_trading_active = 1 and timestamp > '"+LocalDateTime.now().getYear()+"-"+LocalDateTime.now().getMonthValue()+"-"+LocalDateTime.now().getDayOfMonth()+" 08:00:00';");
+		ResultSet rs = stmt.executeQuery("Select userid,access_token,public_token,api_key,api_secret_key from algotrade.user_token_db where platform='ZERODHA' and userId='KUG028';");
 		
         //ResultSet rs = stmt.executeQuery("Select userid,access_token,public_token,api_key,api_secret_key from algotrade.user_token_db where platform='ZERODHA' and is_gamma = 1 and is_active = 1 and is_day_trading_active = 1 and timestamp > '"+LocalDateTime.now().getYear()+"-"+LocalDateTime.now().getMonthValue()+"-"+LocalDateTime.now().getDayOfMonth()+" 08:00:00';");
 

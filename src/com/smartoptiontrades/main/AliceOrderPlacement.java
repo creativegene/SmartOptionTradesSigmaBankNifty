@@ -83,7 +83,7 @@ public class AliceOrderPlacement implements Runnable {
 
     	Statement stmt = con.createStatement();
     	
-    	ResultSet rs = stmt.executeQuery("Select gamma_nf_lot from user_token_db where userid ='"+this.userId+"';");
+    	ResultSet rs = stmt.executeQuery("Select zeta_bnf_lot from user_token_db where userid ='"+this.userId+"';");
     	
     	while(rs.next()) {
 	    	

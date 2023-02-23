@@ -3,16 +3,15 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8"/>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/TechnicalAnalysis"/>
-	<classpathentry kind="lib" path="C:/Users/Vikram/git/SmartOptionUltraNifty/lib/commons-codec-1.10.jar"/>
-	<classpathentry kind="lib" path="C:/Users/Vikram/git/SmartOptionUltraNifty/lib/commons-logging-1.2.jar"/>
-	<classpathentry kind="lib" path="C:/Users/Vikram/git/SmartOptionUltraNifty/lib/gson-2.8.5.jar"/>
-	<classpathentry kind="lib" path="C:/Users/Vikram/git/SmartOptionUltraNifty/lib/httpclient-4.5.10.jar"/>
-	<classpathentry kind="lib" path="C:/Users/Vikram/git/SmartOptionUltraNifty/lib/httpcore-4.4.13.jar"/>
-	<classpathentry kind="lib" path="C:/Users/Vikram/git/SmartOptionUltraNifty/lib/kiteconnect.jar"/>
-	<classpathentry kind="lib" path="C:/Users/Vikram/git/SmartOptionUltraNifty/lib/mail-1.4.7.jar"/>
-	<classpathentry kind="lib" path="C:/Users/Vikram/git/SmartOptionUltraNifty/lib/mysql-connector-java-8.0.12.jar"/>
-	<classpathentry kind="lib" path="C:/Users/Vikram/git/SmartOptionUltraNifty/lib/okhttp-3.9.0.jar"/>
-	<classpathentry kind="lib" path="C:/Users/Vikram/git/SmartOptionUltraNifty/lib/okio-1.13.0.jar"/>
-	<classpathentry kind="lib" path="C:/Users/Vikram/git/SmartOptionUltraNifty/lib/ta4j.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Vikram/eclipse-workspace/SmartOptionTradesZetaBankNifty/lib/commons-codec-1.10.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Vikram/eclipse-workspace/SmartOptionTradesZetaBankNifty/lib/commons-logging-1.2.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Vikram/eclipse-workspace/SmartOptionTradesZetaBankNifty/lib/gson-2.8.5.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Vikram/eclipse-workspace/SmartOptionTradesZetaBankNifty/lib/httpclient-4.5.10.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Vikram/eclipse-workspace/SmartOptionTradesZetaBankNifty/lib/httpcore-4.4.13.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Vikram/eclipse-workspace/SmartOptionTradesZetaBankNifty/lib/kiteconnect.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Vikram/eclipse-workspace/SmartOptionTradesZetaBankNifty/lib/mail-1.4.7.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Vikram/eclipse-workspace/SmartOptionTradesZetaBankNifty/lib/mysql-connector-java-8.0.12.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Vikram/eclipse-workspace/SmartOptionTradesZetaBankNifty/lib/okhttp-3.9.0.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Vikram/eclipse-workspace/SmartOptionTradesZetaBankNifty/lib/okio-1.13.0.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

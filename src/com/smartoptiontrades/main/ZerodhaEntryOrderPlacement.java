@@ -69,8 +69,8 @@ public class ZerodhaEntryOrderPlacement implements Runnable{
 		
 		    	Statement stmt = con.createStatement();
 		    	
-		    	/*
-		    	ResultSet rs = stmt.executeQuery("Select gamma_lot from user_token_db where userid ='"+kiteConnectUser.getUserId()+"';");
+		    	
+		    	ResultSet rs = stmt.executeQuery("Select zeta_bnf_lot from user_token_db where userid ='"+kiteConnectUser.getUserId()+"';");
 		    	
 		    	while(rs.next()) {
 		        	
@@ -80,7 +80,7 @@ public class ZerodhaEntryOrderPlacement implements Runnable{
 				
 					}
 				}
-		    	*/
+		    	
 	    	
 			    OrderParams orderParams = new OrderParams();
 			    orderParams.quantity = quantity;

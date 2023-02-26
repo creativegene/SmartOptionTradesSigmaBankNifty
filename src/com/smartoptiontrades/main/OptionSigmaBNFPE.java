@@ -20,30 +20,35 @@ import java.util.concurrent.Executors;
 
 import org.ta4j.core.BaseTimeSeries;
 import org.ta4j.core.TimeSeries;
+import org.ta4j.core.indicators.MACDIndicator;
 import org.ta4j.core.indicators.RSIIndicator;
+import org.ta4j.core.indicators.SMAIndicator;
+import org.ta4j.core.indicators.StochasticOscillatorKIndicator;
+import org.ta4j.core.indicators.StochasticRSIIndicator;
 import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
 import org.ta4j.core.indicators.volume.VWAPIndicator;
 import org.ta4j.core.personal.HeikinAshi;
 import org.ta4j.core.personal.MoneyFlowIndex;
 import org.ta4j.core.personal.SuperTrend;
+import org.ta4j.core.personal.VWAPIndicatorV2;
 
 import com.zerodhatech.kiteconnect.KiteConnect;
 import com.zerodhatech.kiteconnect.kitehttp.exceptions.KiteException;
 import com.zerodhatech.models.Quote;
 
 
-public class OptionZetaBNFPE implements Runnable{
+public class OptionSigmaBNFPE implements Runnable{
 
 	public void run() {
 		
 		boolean startPEModule = true;
 		Properties prop = new GetPropertiesObject().retrieve();
 		
-		int quantity=Integer.parseInt(prop.getProperty("ZETA_BNF_QTY"));
-		int interval=Integer.parseInt(prop.getProperty("ZETA_BNF_INTERVAL"));
+		int quantity=Integer.parseInt(prop.getProperty("SIGMA_BNF_QTY"));
+		int interval=Integer.parseInt(prop.getProperty("SIGMA_BNF_INTERVAL"));
 		
-		double target = Integer.parseInt(prop.getProperty("ZETA_BNF_TARGET"));
-		double stopLoss = Integer.parseInt(prop.getProperty("ZETA_BNF_STOPLOSS"));		
+		double target = Integer.parseInt(prop.getProperty("SIGMA_BNF_TARGET"));
+		double stopLoss = Integer.parseInt(prop.getProperty("SIGMA_BNF_STOPLOSS"));		
 		
 		String instrumentPEPrimary="",instrumentPESecondary="";
 		String instrumentIDPrimary="",instrumentIDSecondary="";
@@ -54,10 +59,12 @@ public class OptionZetaBNFPE implements Runnable{
 		//boolean triggerValidated = false;
 		boolean bidaskValidation=false;
 		boolean OISupportTrade = false;
-		boolean PE_trade = Boolean.parseBoolean(prop.getProperty("ZETA_BNF_PE_TRADE"));
+		boolean newSeries=false;
+		
+		boolean pe_trade = Boolean.parseBoolean(prop.getProperty("SIGMA_BNF_pe_trade"));
 		boolean isExpiryDay=false;
 		
-		if(PE_trade) {
+		if(pe_trade) {
 			System.out.println(LocalDateTime.now()+" : PE Trade Activated");
 		}else 
 			System.out.println(LocalDateTime.now()+" : PE Trade De-Activated");
@@ -141,7 +148,7 @@ public class OptionZetaBNFPE implements Runnable{
 					
 			}
 		
-			rs=stmt.executeQuery("Select name,instrumentID,exchangeToken from option_trade_instrument where ltp>="+Integer.parseInt(prop.getProperty("ZETA_BNF_OPTION_PRICE"))+" and name like 'BANKNIFTY%00PE' order by ltp asc limit 1;");
+			rs=stmt.executeQuery("Select name,instrumentID,exchangeToken from option_trade_instrument where ltp>="+Integer.parseInt(prop.getProperty("SIGMA_BNF_OPTION_PRICE"))+" and name like 'BANKNIFTY%00PE' order by ltp asc limit 1;");
 			
 			while(rs.next()) {
 				
@@ -153,7 +160,7 @@ public class OptionZetaBNFPE implements Runnable{
 			
 			rs=stmt.executeQuery("Select tradingSymbol,instrument_token,exchange_token from master_instrument_list "
 					+ "where expiry=(Select expiry from master_instrument_list where tradingsymbol='"+instrumentPEPrimary+"') "
-					+ "and strike_price=(Select strike_price-"+prop.getProperty("ZETA_BNF_HEDGE_STRIKE_RANGE")+" from master_instrument_list where tradingsymbol='"+instrumentPEPrimary+"') "
+					+ "and strike_price=(Select strike_price-"+prop.getProperty("SIGMA_BNF_HEDGE_STRIKE_RANGE")+" from master_instrument_list where tradingsymbol='"+instrumentPEPrimary+"') "
 					+ "and tradingsymbol like 'BANKNIFTY%PE';");
 			
 			while(rs.next()) {
@@ -172,21 +179,89 @@ public class OptionZetaBNFPE implements Runnable{
 				e1.printStackTrace();
 		}
 		
+		LocalDateTime currentTime = LocalDateTime.now();
+		String dateStrStart = currentTime.minusDays(5).format(formatter_date).toString()+" "+prop.getProperty("SIGMA_BNF_START_TIME");
+		String dateStrEnd = currentTime.format(formatter_date).toString()+" "+prop.getProperty("SIGMA_BNF_END_TIME");
+	
+		System.out.println("Start Time : "+dateStrStart);
+		System.out.println("End Time : "+dateStrEnd);
+	
+		series= new KiteHistoricalData().retrieve(kiteConnect,dateStrStart,dateStrEnd,instrumentIDPrimary,"1minute");	
+		
+		int seriesBarCount = series.getBarCount();
+		
+		ClosePriceIndicator closePrice = new ClosePriceIndicator(series);		       
+		SMAIndicator MA1 = new SMAIndicator(closePrice, 5);			
+		List<Double> vwap = new VWAPIndicatorV2(series).getVWAPIndicator();			
+		List<Double> superTrend = new SuperTrend(series,interval,2,1).getSuperTrend();			
+		StochasticOscillatorKIndicator stoch = new StochasticOscillatorKIndicator(series,15);
+		SMAIndicator stoch_K = new SMAIndicator(stoch, 5);
+		SMAIndicator stoch_D = new SMAIndicator(stoch_K, 5);
+		RSIIndicator rsi = new RSIIndicator(closePrice, 7);		
+		StochasticRSIIndicator rsi_stoch = new StochasticRSIIndicator(rsi,15);
+		SMAIndicator rsi_K = new SMAIndicator(rsi_stoch, 5);
+		SMAIndicator rsi_D = new SMAIndicator(rsi_K, 5);
+		MACDIndicator macd = new MACDIndicator(closePrice,12,26);
+		SMAIndicator macd_signal = new SMAIndicator(macd, 9);
+		
+		System.out.println(currentTime+" : "+closePrice.getValue(seriesBarCount-1)+"|"+vwap.get(seriesBarCount-1)
+		+"|"+superTrend.get(seriesBarCount-1)+"|"+stoch_K.getValue(seriesBarCount-1)+"|"+stoch_D.getValue(seriesBarCount-1)
+		+"|"+rsi_K.getValue(seriesBarCount-1)+"|"+rsi_D.getValue(seriesBarCount-1)+"|"+macd.getValue(seriesBarCount-1)
+		+"|"+macd_signal.getValue(seriesBarCount-1));
+		
 		while(startPEModule) {
 			
 			prop = new GetPropertiesObject().retrieve();
-			LocalDateTime currentTime = LocalDateTime.now();
+			currentTime = LocalDateTime.now();
+			
+			if(currentTime.getSecond()==0) {
+				
+				//dateStrStart = currentTime.minusDays(5).format(formatter_date).toString()+" "+prop.getProperty("SIGMA_BNF_START_TIME");
+				dateStrEnd = currentTime.format(formatter).toString();
+			
+				//System.out.println("Start Time : "+dateStrStart);
+				//System.out.println("End Time : "+dateStrEnd);
+			
+				series= new KiteHistoricalData().retrieve(kiteConnect,dateStrStart,dateStrEnd,instrumentIDPrimary,"1minute");	
+				seriesBarCount = series.getBarCount();
+				
+				closePrice = new ClosePriceIndicator(series);		       
+				MA1 = new SMAIndicator(closePrice, 5);			
+				vwap = new VWAPIndicatorV2(series).getVWAPIndicator();			
+				superTrend = new SuperTrend(series,interval,2,1).getSuperTrend();			
+				stoch = new StochasticOscillatorKIndicator(series,15);
+				stoch_K = new SMAIndicator(stoch, 5);
+				stoch_D = new SMAIndicator(stoch_K, 5);
+				rsi = new RSIIndicator(closePrice, 7);		
+				rsi_stoch = new StochasticRSIIndicator(rsi,15);
+				rsi_K = new SMAIndicator(rsi_stoch, 5);
+				rsi_D = new SMAIndicator(rsi_K, 5);
+				macd = new MACDIndicator(closePrice,12,26);
+				macd_signal = new SMAIndicator(macd, 9);
+				
+				System.out.println(currentTime+" : "+closePrice.getValue(seriesBarCount-1)+"|"+vwap.get(seriesBarCount-1)
+				+"|"+superTrend.get(seriesBarCount-1)+"|"+stoch_K.getValue(seriesBarCount-1)+"|"+stoch_D.getValue(seriesBarCount-1)
+				+"|"+rsi_K.getValue(seriesBarCount-1)+"|"+rsi_D.getValue(seriesBarCount-1)+"|"+macd.getValue(seriesBarCount-1)
+				+"|"+macd_signal.getValue(seriesBarCount-1));				
+				
+				if(series.getBar(seriesBarCount-1).getClosePrice().isGreaterThan(superTrend.get(seriesBarCount-1)) 
+						&& series.getBar(seriesBarCount-2).getClosePrice().isLessThan(superTrend.get(seriesBarCount-2))) {
+					System.out.println(LocalDateTime.now()+" : New PE Series Initiated");
+					newSeries=true;
+				}
+				
+			}
 			
 			/*
 			if(!triggerEvaluated) {	
 				
-				String dateStrStart = currentTime.format(formatter_date).toString()+" "+prop.getProperty("ZETA_BNF_START_TIME");
-				String dateStrEnd = currentTime.format(formatter_date).toString()+" "+prop.getProperty("ZETA_BNF_END_TIME");
+				String dateStrStart = currentTime.format(formatter_date).toString()+" "+prop.getProperty("SIGMA_BNF_START_TIME");
+				String dateStrEnd = currentTime.format(formatter_date).toString()+" "+prop.getProperty("SIGMA_BNF_END_TIME");
 				
 				System.out.println("Start Time : "+dateStrStart);
 				System.out.println("End Time : "+dateStrEnd);
 								
-				series= new KiteHistoricalData().retrieve(kiteConnect,dateStrStart,dateStrEnd,prop.getProperty("ZETA_BNF_FUT_ID"),"1minute");				
+				series= new KiteHistoricalData().retrieve(kiteConnect,dateStrStart,dateStrEnd,prop.getProperty("SIGMA_BNF_FUT_ID"),"1minute");				
 				
 				for(int i=0;i<series.getBarCount();i++) {
 					
@@ -207,15 +282,15 @@ public class OptionZetaBNFPE implements Runnable{
 					
 					close=series.getBar(i).getClosePrice().doubleValue();
 				}
-				System.out.println("------------------BANK NIFTY FUTURE "+prop.getProperty("ZETA_BNF_START_TIME")+" "+prop.getProperty("ZETA_BNF_INTERVAL")+"min Candlestick------------------");
+				System.out.println("------------------BANK NIFTY FUTURE "+prop.getProperty("SIGMA_BNF_START_TIME")+" "+prop.getProperty("SIGMA_BNF_INTERVAL")+"min Candlestick------------------");
 				System.out.println(startTime+"|"+open+"|"+high+"|"+low+"|"+close);
 				triggerEvaluated=true;
 			}
 			
-			if(!triggerValidated && triggerEvaluated && PE_trade) {
+			if(!triggerValidated && triggerEvaluated && pe_trade) {
 				
 				try {
-					Fut_Price=getLTP(kiteConnect, prop.getProperty("ZETA_BNF_FUT_ID"));
+					Fut_Price=getLTP(kiteConnect, prop.getProperty("SIGMA_BNF_FUT_ID"));
 				} catch (IOException | KiteException e) {
 					// TODO Auto-generated catch block
 					// TODO Auto-generated catch block
@@ -241,12 +316,18 @@ public class OptionZetaBNFPE implements Runnable{
 			}
 			*/
 			
-			if(OISupportTrade && bidaskValidation && PE_trade){
+			if(series.getBar(seriesBarCount-1).getClosePrice().isGreaterThan(superTrend.get(seriesBarCount-1)) && newSeries
+					&& series.getBar(seriesBarCount-1).getClosePrice().isGreaterThan(series.getBar(seriesBarCount-1).getOpenPrice())
+					&& macd.getValue(seriesBarCount-1).isGreaterThan(macd_signal.getValue(seriesBarCount-1))
+					&& stoch_K.getValue(seriesBarCount-1).isGreaterThan(stoch_D.getValue(seriesBarCount-1)) && stoch_K.getValue(seriesBarCount-1).isLessThan(80)
+					&& rsi_K.getValue(seriesBarCount-1).isGreaterThan(rsi_D.getValue(seriesBarCount-1)) && rsi_K.getValue(seriesBarCount-1).isLessThan(80)
+					&& OISupportTrade && bidaskValidation && pe_trade){
+				
+				newSeries=false;
 				
 				ExecutorService executor = Executors.newFixedThreadPool(50);
 				
-				//double entryPrice = series.getBar(barCount-1).getClosePrice().doubleValue();
-				
+				/*
 				for (Map.Entry<String, KiteConnect> entry : kiteUserMap.entrySet()) {
 					
 					try {
@@ -286,14 +367,14 @@ public class OptionZetaBNFPE implements Runnable{
 					// TODO Auto-generated catch block
 					e3.printStackTrace();
 				}
-				
+				*/
 				for (Map.Entry<String, KiteConnect> entry : kiteUserMap.entrySet()) {
 					
 					try {
 						
 						KiteConnect kiteConnection = (KiteConnect)entry.getValue();
 			    	    
-			    	    executor.execute(new ZerodhaEntryOrderPlacement(instrumentPEPrimary,quantity,"SELL","MIS",0.0,kiteConnection));
+			    	    executor.execute(new ZerodhaEntryOrderPlacement(instrumentPEPrimary,quantity,"BUY","MIS",0.0,kiteConnection));
 		    	    
 					}catch(Exception e) {
 						
@@ -308,7 +389,7 @@ public class OptionZetaBNFPE implements Runnable{
 					
 					try {
 						
-						executor.execute(new AliceOrderPlacement((String)entry.getKey(),(String)entry.getValue(),instrumentPEPrimary,"MIS",instrumentExIDPrimary,quantity,"SELL",0.0));
+						executor.execute(new AliceOrderPlacement((String)entry.getKey(),(String)entry.getValue(),instrumentPEPrimary,"MIS",instrumentExIDPrimary,quantity,"BUY",0.0));
 					
 					}catch(Exception e) {
 					
@@ -329,10 +410,11 @@ public class OptionZetaBNFPE implements Runnable{
 				System.out.println(LocalDateTime.now()+" : PE Order Placed");
 				
 				try {
-					PE_Secondary_Init_Price=getLTP(kiteConnect, instrumentIDSecondary);
+					//PE_Secondary_Init_Price=getLTP(kiteConnect, instrumentIDSecondary);
 					PE_Primary_Init_Price=getLTP(kiteConnect, instrumentIDPrimary);
-					new RestTelegramCall().send("BUYING%20"+instrumentPESecondary+"%20@%20"+PE_Secondary_Init_Price);					
-					new RestTelegramCall().send("SELLING%20"+instrumentPEPrimary+"%20@%20"+PE_Primary_Init_Price);
+					//new RestTelegramCall().send("BUYING%20"+instrumentPESecondary+"%20@%20"+PE_Secondary_Init_Price);	
+					//Thread.sleep(1000);
+					new RestTelegramCall().send("BUYING%20"+instrumentPEPrimary+"%20@%20"+PE_Primary_Init_Price);
 				} catch (Exception | KiteException e2) {
 					// TODO Auto-generated catch block
 					e2.printStackTrace();
@@ -343,10 +425,48 @@ public class OptionZetaBNFPE implements Runnable{
 				while(orderPlaced) {
 					
 					prop = new GetPropertiesObject().retrieve();
+					currentTime = LocalDateTime.now();
+					
+					if(currentTime.getSecond()==0) {
+						
+						//dateStrStart = currentTime.minusDays(5).format(formatter_date).toString()+" "+prop.getProperty("SIGMA_BNF_START_TIME");
+						dateStrEnd = currentTime.format(formatter).toString();
+					
+						//System.out.println("Start Time : "+dateStrStart);
+						//System.out.println("End Time : "+dateStrEnd);
+					
+						series= new KiteHistoricalData().retrieve(kiteConnect,dateStrStart,dateStrEnd,instrumentIDPrimary,"1minute");	
+						seriesBarCount = series.getBarCount();
+						
+						closePrice = new ClosePriceIndicator(series);		       
+						MA1 = new SMAIndicator(closePrice, 5);			
+						vwap = new VWAPIndicatorV2(series).getVWAPIndicator();			
+						superTrend = new SuperTrend(series,interval,2,1).getSuperTrend();			
+						stoch = new StochasticOscillatorKIndicator(series,15);
+						stoch_K = new SMAIndicator(stoch, 5);
+						stoch_D = new SMAIndicator(stoch_K, 5);
+						rsi = new RSIIndicator(closePrice, 7);		
+						rsi_stoch = new StochasticRSIIndicator(rsi,15);
+						rsi_K = new SMAIndicator(rsi_stoch, 5);
+						rsi_D = new SMAIndicator(rsi_K, 5);
+						macd = new MACDIndicator(closePrice,12,26);
+						macd_signal = new SMAIndicator(macd, 9);
+						
+						System.out.println(LocalDateTime.now()+" : "+closePrice.getValue(seriesBarCount-1)+"|"+vwap.get(seriesBarCount-1)
+						+"|"+superTrend.get(seriesBarCount-1)+"|"+stoch_K.getValue(seriesBarCount-1)+"|"+stoch_D.getValue(seriesBarCount-1)
+						+"|"+rsi_K.getValue(seriesBarCount-1)+"|"+rsi_D.getValue(seriesBarCount-1)+"|"+macd.getValue(seriesBarCount-1)
+						+"|"+macd_signal.getValue(seriesBarCount-1));
+						
+						if(series.getBar(seriesBarCount-1).getClosePrice().isGreaterThan(superTrend.get(seriesBarCount-1)) 
+								&& series.getBar(seriesBarCount-2).getClosePrice().isLessThan(superTrend.get(seriesBarCount-2))) {
+							System.out.println(LocalDateTime.now()+" : New PE Series Initiated");
+							newSeries=true;
+						}
+					}
 					
 					try {
 						PE_Price=getLTP(kiteConnect, instrumentIDPrimary);
-						Fut_Price=getLTP(kiteConnect, prop.getProperty("ZETA_BNF_FUT_ID"));
+						Fut_Price=getLTP(kiteConnect, prop.getProperty("SIGMA_BNF_FUT_ID"));
 					} catch (IOException | KiteException e) {
 						// TODO Auto-generated catch block
 						StringWriter sw = new StringWriter();
@@ -374,11 +494,13 @@ public class OptionZetaBNFPE implements Runnable{
 						orderFilled=true;
 					}
 					*/
-					target = Integer.parseInt(prop.getProperty("ZETA_BNF_TARGET"));
-					stopLoss = Integer.parseInt(prop.getProperty("ZETA_BNF_STOPLOSS"));
+					target = Integer.parseInt(prop.getProperty("SIGMA_BNF_TARGET"));
+					stopLoss = Integer.parseInt(prop.getProperty("SIGMA_BNF_STOPLOSS"));
 					
-					if(PE_Price<=PE_Primary_Init_Price-target || PE_Price>=PE_Primary_Init_Price+stopLoss || (LocalDateTime.now().getHour()==15 && LocalDateTime.now().getMinute()==15)) {
-													
+					if(PE_Price<vwap.get(seriesBarCount-1) || PE_Price<superTrend.get(seriesBarCount-1) 
+							|| PE_Price>=PE_Primary_Init_Price+target || PE_Price<=PE_Primary_Init_Price-stopLoss 
+							|| (LocalDateTime.now().getHour()==15 && LocalDateTime.now().getMinute()==15)) {	
+						
 						executor = Executors.newFixedThreadPool(Integer.parseInt(prop.getProperty("THREAD_COUNT")));
 						
 						for (Map.Entry<String, KiteConnect> entry : kiteUserMap.entrySet()) {
@@ -387,7 +509,7 @@ public class OptionZetaBNFPE implements Runnable{
 								
 								KiteConnect kiteConnection = (KiteConnect)entry.getValue();
 					    	    
-					    	    executor.execute(new ZerodhaExitOrderPlacement(instrumentPEPrimary,quantity,"BUY","MIS",0.0,kiteConnection));
+					    	    executor.execute(new ZerodhaExitOrderPlacement(instrumentPEPrimary,quantity,"SELL","MIS",0.0,kiteConnection));
 				    	    
 							}catch(Exception e) {
 								
@@ -402,7 +524,7 @@ public class OptionZetaBNFPE implements Runnable{
 							
 							try {
 								
-								executor.execute(new AliceExitOrderPlacement((String)entry.getKey(),(String)entry.getValue(),instrumentPEPrimary,"MIS",instrumentExIDPrimary,quantity,"BUY",0.0));
+								executor.execute(new AliceExitOrderPlacement((String)entry.getKey(),(String)entry.getValue(),instrumentPEPrimary,"MIS",instrumentExIDPrimary,quantity,"SELL",0.0));
 							
 							}catch(Exception e) {
 							
@@ -413,7 +535,7 @@ public class OptionZetaBNFPE implements Runnable{
 							}
 							
 						}
-						
+						/*
 						for (Map.Entry<String, KiteConnect> entry : kiteUserMap.entrySet()) {
 							
 							try {
@@ -446,48 +568,14 @@ public class OptionZetaBNFPE implements Runnable{
 							}
 							
 						}
-						
-						
-						/*
-						for (Map.Entry<String, KiteConnect> entry : kiteUserMap.entrySet()) {
-							
-							try {
-								
-								KiteConnect kiteConnection = (KiteConnect)entry.getValue();
-					    	    
-					    	    executor.execute(new ZerodhaCancelLimitOrder(instrumentPEPrimary,kiteConnection));
-				    	    
-							}catch(Exception e) {
-								
-								System.out.println(LocalDateTime.now()+" : !!!!!!!!!!!!!!!!FROM Zerodha SELL Block!!!!!!!!!!!!!!!");
-								System.out.println(LocalDateTime.now()+" : "+e.getMessage());
-								System.out.println(LocalDateTime.now()+" : !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-							}
-				    	    
-				    	}
-						
-						for (Map.Entry<String, String> entry : aliceUserMap.entrySet()) {
-							
-							try {
-								
-								executor.execute(new AliceCancelLimitOrder((String)entry.getKey(),(String)entry.getValue(),instrumentPEPrimary));
-							
-							}catch(Exception e) {
-							
-								System.out.println(LocalDateTime.now()+" : !!!!!!!!!!!!!!!!FROM Alice Cancel Order Block!!!!!!!!!!!!!!!");
-								System.out.println(LocalDateTime.now()+" : "+e.getMessage());
-								System.out.println(LocalDateTime.now()+" : !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-								
-							}
-							
-						}
 						*/
 						
 						try {
-							PE_Secondary_Final_Price=getLTP(kiteConnect, instrumentIDSecondary);
+							//PE_Secondary_Final_Price=getLTP(kiteConnect, instrumentIDSecondary);
 							PE_Primary_Final_Price=getLTP(kiteConnect, instrumentIDPrimary);
-							new RestTelegramCall().send("BUYING%20"+instrumentPEPrimary+"%20@%20"+PE_Primary_Final_Price);					
-							new RestTelegramCall().send("SELLING%20"+instrumentPESecondary+"%20@%20"+PE_Secondary_Final_Price);
+							new RestTelegramCall().send("SELLING%20"+instrumentPEPrimary+"%20@%20"+PE_Primary_Final_Price);
+							//Thread.sleep(1000);
+							//new RestTelegramCall().send("SELLING%20"+instrumentPESecondary+"%20@%20"+PE_Secondary_Final_Price);
 						} catch (Exception | KiteException e2) {
 							// TODO Auto-generated catch block
 							e2.printStackTrace();
@@ -497,12 +585,12 @@ public class OptionZetaBNFPE implements Runnable{
 						executor.shutdown();
 
 						orderPlaced=false;
-						startPEModule=false;
+						//startPEModule=false;
 						
 						if(orderFilled) {
 							try {
-								stmt.executeUpdate("insert into algotrade.strategy_order_book values ('Zeta Bank Nifty','"+instrumentPEPrimary+"','"+orderTime+"',"+PE_Primary_Init_Price+",'"+currentTime+"',"+PE_Primary_Final_Price+");");
-								stmt.executeUpdate("insert into algotrade.strategy_order_book values ('Zeta Bank Nifty','"+instrumentPESecondary+"','"+orderTime+"',"+PE_Secondary_Init_Price+",'"+currentTime+"',"+PE_Secondary_Final_Price+");");
+								stmt.executeUpdate("insert into algotrade.strategy_order_book values ('Sigma Bank Nifty','"+instrumentPEPrimary+"','"+orderTime+"',"+PE_Primary_Init_Price+",'"+currentTime+"',"+PE_Primary_Final_Price+");");
+								stmt.executeUpdate("insert into algotrade.strategy_order_book values ('Sigma Bank Nifty','"+instrumentPESecondary+"','"+orderTime+"',"+PE_Secondary_Init_Price+",'"+currentTime+"',"+PE_Secondary_Final_Price+");");
 
 							} catch (SQLException e) {
 								// TODO Auto-generated catch block
@@ -535,32 +623,32 @@ public class OptionZetaBNFPE implements Runnable{
 					
 					while(rs.next()) {
 						
-						if(Double.parseDouble(rs.getString(1))<1 || isExpiryDay) {
+						if(Double.parseDouble(rs.getString(1))>1 || isExpiryDay) {
 							
 							bidaskValidationPE=true;
-							System.out.println(LocalDateTime.now()+" : PE Short Bid Ask "+rs.getString(1)+" Validation => "+bidaskValidationPE);
+							System.out.println(LocalDateTime.now()+" : PE Bid Ask "+rs.getString(1)+" Validation => "+bidaskValidationPE);
 							
 						}else {
 							
 							bidaskValidationPE=false;
-							System.out.println(LocalDateTime.now()+" : PE Short Bid Ask "+rs.getString(1)+" Validation => "+bidaskValidationPE);
+							System.out.println(LocalDateTime.now()+" : PE Bid Ask "+rs.getString(1)+" Validation => "+bidaskValidationPE);
 						}
 						
 					}
 					
-					rs = stmt_tdb.executeQuery("Select avg(bid_qty/ask_qty) from tickdata where id="+prop.getProperty("ZETA_BNF_FUT_ID")+" and timestamp >= '"+currentTime.minusSeconds(30).format(formatter)+"';");
+					rs = stmt_tdb.executeQuery("Select avg(bid_qty/ask_qty) from tickdata where id="+prop.getProperty("SIGMA_BNF_FUT_ID")+" and timestamp >= '"+currentTime.minusSeconds(30).format(formatter)+"';");
 					
 					while(rs.next()) {
 						
-						if(Double.parseDouble(rs.getString(1))>1) {
+						if(Double.parseDouble(rs.getString(1))<1) {
 							
 							bidaskValidationFut=true;
-							System.out.println(LocalDateTime.now()+" : Fut Long Bid Ask "+rs.getString(1)+" Validation => "+bidaskValidationFut);
+							System.out.println(LocalDateTime.now()+" : Fut Short Bid Ask "+rs.getString(1)+" Validation => "+bidaskValidationFut);
 							
 						}else {
 							
 							bidaskValidationFut=false;
-							System.out.println(LocalDateTime.now()+" : Fut Long Bid Ask "+rs.getString(1)+" Validation => "+bidaskValidationFut);
+							System.out.println(LocalDateTime.now()+" : Fut Short Bid Ask "+rs.getString(1)+" Validation => "+bidaskValidationFut);
 						}
 						
 					}
@@ -634,12 +722,12 @@ public class OptionZetaBNFPE implements Runnable{
 				//System.out.println(LocalDateTime.now()+" PE Point = "+countPEPoint);
 				//System.out.println(LocalDateTime.now()+" PE Point = "+countPEPoint);
 				
-				if(countCEPoint>countPEPoint) {
+				if(countPEPoint>countCEPoint) {
 					OISupportTrade=true;
-					System.out.println(LocalDateTime.now()+" : OI Support PE Short Trade");
+					System.out.println(LocalDateTime.now()+" : OI Support PE Trade");
 				}else {
 					OISupportTrade=false;
-					System.out.println(LocalDateTime.now()+" : OI Does Not Support PE Short Trade");
+					System.out.println(LocalDateTime.now()+" : OI Does Not Support PE Trade");
 				}
 				
 			}

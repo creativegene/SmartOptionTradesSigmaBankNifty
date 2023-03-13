@@ -11,8 +11,10 @@ public class MainOptionSigmaBankNifty {
 		
 		ExecutorService executor = Executors.newFixedThreadPool(2);
 
-		executor.execute(new OptionSigmaBNFCE());
-		executor.execute(new OptionSigmaBNFPE());
+		executor.execute(new OptionSigmaBNFCE_Buy());
+		executor.execute(new OptionSigmaBNFPE_Buy());
+		
+		executor.shutdown();
 		
 	}
 

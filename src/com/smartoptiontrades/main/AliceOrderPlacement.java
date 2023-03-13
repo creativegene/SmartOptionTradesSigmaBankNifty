@@ -83,7 +83,7 @@ public class AliceOrderPlacement implements Runnable {
 
     	Statement stmt = con.createStatement();
     	
-    	ResultSet rs = stmt.executeQuery("Select zeta_bnf_lot from user_token_db where userid ='"+this.userId+"';");
+    	ResultSet rs = stmt.executeQuery("Select sigma_bnf_lot from user_token_db where userid ='"+this.userId+"';");
     	
     	while(rs.next()) {
 	    	
@@ -95,7 +95,7 @@ public class AliceOrderPlacement implements Runnable {
     	
     	System.out.println(LocalDateTime.now()+" : Placing "+action+" order for "+instrumentName+" Quantity = "+quantity+" for "+userId);
     	
-HttpPost request = new HttpPost("https://a3.aliceblueonline.com/rest/AliceBlueAPIService/api/placeOrder/executePlaceOrder");
+    	HttpPost request = new HttpPost("https://a3.aliceblueonline.com/rest/AliceBlueAPIService/api/placeOrder/executePlaceOrder");
         
         JsonObject json = new JsonObject();
         json.addProperty("complexty", "regular");

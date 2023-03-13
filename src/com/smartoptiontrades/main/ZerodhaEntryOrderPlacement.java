@@ -70,7 +70,7 @@ public class ZerodhaEntryOrderPlacement implements Runnable{
 		    	Statement stmt = con.createStatement();
 		    	
 		    	
-		    	ResultSet rs = stmt.executeQuery("Select zeta_bnf_lot from user_token_db where userid ='"+kiteConnectUser.getUserId()+"';");
+		    	ResultSet rs = stmt.executeQuery("Select sigma_bnf_lot from user_token_db where userid ='"+kiteConnectUser.getUserId()+"';");
 		    	
 		    	while(rs.next()) {
 		        	

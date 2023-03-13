@@ -27,7 +27,7 @@ public HashMap<String,String> retrieve () throws ClassNotFoundException, SQLExce
 		
 		//ResultSet rs = stmt.executeQuery("Select userid,access_token,public_token,api_key,api_secret_key from algotrade.user_token_db where platform='ALICE' and userId='154560' and is_day_trading_active = 1 and timestamp > '"+LocalDateTime.now().getYear()+"-"+LocalDateTime.now().getMonthValue()+"-"+LocalDateTime.now().getDayOfMonth()+" 08:00:00';");
 		
-        ResultSet rs = stmt.executeQuery("Select userid,access_token from algotrade.user_token_db where platform='ALICE' and is_zeta_bnf = 1  and is_active = 1 and is_day_trading_active = 1 and timestamp > '"+LocalDateTime.now().getYear()+"-"+LocalDateTime.now().getMonthValue()+"-"+LocalDateTime.now().getDayOfMonth()+" 08:00:00';");
+        ResultSet rs = stmt.executeQuery("Select userid,access_token from algotrade.user_token_db where platform='ALICE' and is_sigma_bnf = 1  and is_active = 1 and is_day_trading_active = 1 and timestamp > '"+LocalDateTime.now().getYear()+"-"+LocalDateTime.now().getMonthValue()+"-"+LocalDateTime.now().getDayOfMonth()+" 08:00:00';");
 
         while(rs.next()){
         	
